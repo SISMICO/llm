@@ -1,0 +1,67 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16 # Use an official pgvector image (choose PG version)
+    container_name: pgvector_db
+    environment:
+      # These should match your .env file for consistency,
+      # but are set explicitly here for the db service.
+      POSTGRES_DB: ${DB_NAME:-mydatabase} # Use default if not set in .env
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Persist data
+    ports:
+      - "${DB_PORT:-5432}:5432" # Expose port (optional, for external access/debug)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-user} -d ${DB_NAME:-mydatabase}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - vectornet
+
+  app:
+    container_name: markdown_processor_app
+    build:
+      context: . # Use the Dockerfile in the current directory
+      dockerfile: Dockerfile
+    env_file:
+      - .env # Load environment variables from .env file
+    environment:
+      # Override DB_HOST to use the service name from docker-compose
+      - DB_HOST=${DB_HOST:-db}
+      # Ensure other necessary env vars are available if not in .env
+      - DB_NAME=${DB_NAME:-llm}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_PORT=5432 # Internal port for postgres
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
+      - MARKDOWN_DIR=${MARKDOWN_DIR:-./sample_docs}
+      - CHUNK_SIZE=${CHUNK_SIZE:-500}
+      - CHUNK_OVERLAP=${CHUNK_OVERLAP:-50}
+    volumes:
+      # Mount src code for development (reflects changes without rebuild)
+      - ./src:/app/src
+      # Mount sample_docs if you want to add/change docs without rebuilding
+      - /home/leonardo/Remote/Rehagro/Anotacoes:/app/sample_docs
+      # Mount .env file if you want changes reflected (optional)
+      # - ./.env:/app/.env
+    depends_on:
+      db:
+        condition: service_healthy # Wait for db to be healthy
+    networks:
+      - vectornet
+    # Keep the container running after the script finishes (optional)
+    # stdin_open: true
+    # tty: true
+    # Default command is set in Dockerfile, override here for specific tasks
+    # command: ["python", "-m", "src.load_data"] # Example: run loader by default
+
+networks:
+  vectornet:
+    driver: bridge
+
+volumes:
+  postgres_data: # Define the named volume for data persistence
