@@ -14,7 +14,6 @@ from langchain_ollama import OllamaEmbeddings
 # You might need to install:
 # pip install langchain-community ollama "unstructured[md]"
 # For UnstructuredMarkdownLoader, you might need: pip install "unstructured[md]"
-from langchain_ollama import OllamaEmbeddings
 # Previously: from langchain_community.embeddings import HuggingFaceEmbeddings
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

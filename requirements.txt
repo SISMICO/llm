@@ -10,3 +10,9 @@ langchain-ollama~=0.3.2
 unstructured[md]~=0.17.2
 numpy~=2.2.5
 faiss-cpu~=1.11.0
+
+requests~=2.32.3
+
+fastapi~=0.115.12
+uvicorn[standard]~=0.34.2
+pydantic~=2.11.4

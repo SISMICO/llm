@@ -17,7 +17,7 @@ load_dotenv()
 
 # Configuration for Ollama Embeddings (should match load_data.py)
 OLLAMA_EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "llama3.2")
-OLLAMA_LLM_MODEL = os.getenv("OLLAMA_LLM_MODEL", "llama3.2") # Model for generation
+OLLAMA_LLM_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2") # Model for generation
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
 embeddings_model_instance = None

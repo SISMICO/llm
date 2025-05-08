@@ -1,3 +1,4 @@
+import os
 from langchain_community.llms import Ollama
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -5,7 +6,7 @@ from langchain_ollama import ChatOllama
 
 def main():
     # To ensure Ollama is running, you can execute `ollama serve` or `ollama run llama3.2` in your terminal.
-    model_name = "llama3.2" # Replace with your desired Ollama model
+    model_name = os.getenv("OLLAMA_MODEL", "llama3.2") # Replace with your desired Ollama model
 
     try:
         llm = ChatOllama(model=model_name)
