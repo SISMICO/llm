@@ -311,7 +311,7 @@ def run_agent():
     agent_executor = AgentExecutor(
         agent=agent,
         tools=tools,
-        verbose=True,
+        verbose=False,
         handle_parsing_errors="Check your output and make sure it conforms to the Action/Action Input format.",
         max_iterations=5 # Prevents overly long loops
     )
