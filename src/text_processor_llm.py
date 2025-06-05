@@ -2,12 +2,13 @@
 
 import os
 import logging
+import re
 from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 load_dotenv()
 
 # Configuration for Ollama
@@ -16,13 +17,36 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
 llm_instance = None
 
+def clean_response(text: str) -> str:
+    """Remove thinking tags and other unwanted markup from LLM response."""
+    # Remove thinking tags and their content
+    text = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    
+    # Remove other common thinking patterns
+    text = re.sub(r'\*\*Thinking:?\*\*.*?(?=\n\n|\n[A-Z]|$)', '', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'Thinking:.*?(?=\n\n|\n[A-Z]|$)', '', text, flags=re.DOTALL | re.IGNORECASE)
+    
+    # Remove introductory phrases that might have slipped through
+    text = re.sub(r'^(Here is the corrected text:?|Here is the translation:?|Corrected text:?|Translation:?)\s*', '', text, flags=re.IGNORECASE)
+    
+    # Clean up extra whitespace
+    text = re.sub(r'\n\s*\n', '\n', text)
+    text = text.strip()
+    
+    return text
+
 def initialize_llm():
     """Initializes the Ollama LLM instance."""
     global llm_instance
     if llm_instance is None:
         try:
             logging.info(f"Initializing Ollama model: {OLLAMA_MODEL_NAME} from {OLLAMA_BASE_URL}...")
-            llm_instance = ChatOllama(model=OLLAMA_MODEL_NAME, base_url=OLLAMA_BASE_URL)
+            llm_instance = ChatOllama(
+                model=OLLAMA_MODEL_NAME, 
+                base_url=OLLAMA_BASE_URL,
+                temperature=0.1,  # Lower temperature for more focused responses
+            )
             # Test LLM to ensure it's working
             llm_instance.invoke("Respond with 'ok' if you are working.")
             logging.info(f"Ollama model '{OLLAMA_MODEL_NAME}' initialized successfully.")
@@ -39,21 +63,28 @@ def correct_grammar_and_syntax(text: str) -> str:
         logging.error("LLM not initialized. Cannot correct text.")
         return "Error: LLM not initialized."
 
-    prompt_template_str = """You are an expert English proofreader.
-Correct any grammatical errors and improve the syntax of the following text.
-Only output the corrected text, without any explanations or preambles. Do not add any introductory phrases like "Here is the corrected text:".
+    prompt_template_str = """You are an expert English proofreader. Your task is to ONLY provide the corrected text.
 
-Original Text:
-{english_text}
+CRITICAL INSTRUCTIONS - FOLLOW EXACTLY:
+- Do NOT use any XML tags like <thinking>, <think>, or any other markup
+- Do NOT explain what you changed
+- Do NOT provide reasoning or thinking steps
+- Do NOT add any commentary, analysis, or notes
+- Do NOT include phrases like "Here is the corrected text:" or similar
+- Do NOT use any formatting tags or markup
+- ONLY output the corrected text itself, nothing else
 
-Corrected Text:"""
+Correct any grammatical errors and improve the syntax while keeping the original meaning:
+
+{english_text}"""
+    
     prompt = ChatPromptTemplate.from_template(prompt_template_str)
     chain = prompt | llm_instance | StrOutputParser()
 
     try:
         logging.info("Requesting grammar and syntax correction from LLM...")
         corrected_text = chain.invoke({"english_text": text})
-        return corrected_text.strip()
+        return clean_response(corrected_text)
     except Exception as e:
         logging.error(f"Error during grammar correction: {e}")
         return f"Error during grammar correction: {e}"
@@ -64,21 +95,28 @@ def translate_to_portuguese_br(text: str) -> str:
         logging.error("LLM not initialized. Cannot translate text.")
         return "Error: LLM not initialized."
 
-    prompt_template_str = """You are an expert translator.
-Translate the following English text accurately into Brazilian Portuguese.
-Only output the Brazilian Portuguese translation, without any explanations or preambles. Do not add any introductory phrases like "Here is the translation:".
+    prompt_template_str = """You are an expert translator. Your task is to ONLY provide the translation.
 
-English Text:
-{english_text_to_translate}
+CRITICAL INSTRUCTIONS - FOLLOW EXACTLY:
+- Do NOT use any XML tags like <thinking>, <think>, or any other markup
+- Do NOT explain your translation choices
+- Do NOT provide reasoning or thinking steps
+- Do NOT add any commentary, analysis, or notes
+- Do NOT include phrases like "Here is the translation:" or similar
+- Do NOT use any formatting tags or markup
+- ONLY output the Brazilian Portuguese translation itself, nothing else
 
-Brazilian Portuguese Translation:"""
+Translate this English text to Brazilian Portuguese:
+
+{english_text_to_translate}"""
+    
     prompt = ChatPromptTemplate.from_template(prompt_template_str)
     chain = prompt | llm_instance | StrOutputParser()
 
     try:
         logging.info("Requesting translation to Brazilian Portuguese from LLM...")
         translated_text = chain.invoke({"english_text_to_translate": text})
-        return translated_text.strip()
+        return clean_response(translated_text)
     except Exception as e:
         logging.error(f"Error during translation: {e}")
         return f"Error during translation: {e}"
@@ -112,10 +150,10 @@ def main():
             print(f"\n--- Corrected English Text ---")
             print(corrected_text)
 
-            translated_text_pt_br = translate_to_portuguese_br(corrected_text) # Translate the corrected text
-            print(f"\n--- Brazilian Portuguese Translation ---")
-            print(translated_text_pt_br)
-            print("\n--------------------------------------")
+            # translated_text_pt_br = translate_to_portuguese_br(corrected_text) # Translate the corrected text
+            # print(f"\n--- Brazilian Portuguese Translation ---")
+            # print(translated_text_pt_br)
+            # print("\n--------------------------------------")
 
         except Exception as e:
             logging.error(f"An unexpected error occurred in the main loop: {e}")
