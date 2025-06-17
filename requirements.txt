@@ -7,6 +7,7 @@ langchain~=0.3.25 # Or a newer version
 langchain-community~=0.3.23 # Or a newer version
 langchain-core~=0.3.58 # Or a newer version
 langchain-ollama~=0.3.2
+langchain-google-genai~=2.1.5
 unstructured[md]~=0.17.2
 numpy~=2.2.5
 faiss-cpu~=1.11.0
