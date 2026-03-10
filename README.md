@@ -3,24 +3,27 @@ This setup allows you to run a single Large Language Model (LLM) on a **Raspberr
 
 ---
 
-## 🧠 1. The Server: llama.cpp
+## 🧠 1. The Server: Ollama
 **Description:** The core engine. It runs the model and provides an API that mimics OpenAI and Anthropic natively.
-* **Link:** [github.com/ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp)
+* **Link:** [github.com/ollama/ollama](https://github.com/ollama/ollama)
 * **Installation (on Raspberry Pi):**
     1. **Install dependencies:** 
        ```bash
-       sudo apt update && sudo apt install git cmake g++ build-essential libcpp-httplib-dev -y
+       sudo apt update
+       curl -fsSL https://ollama.com/install.sh | sh
        ```
-    2. **Clone & Build:**
-       ```bash
-       git clone [https://github.com/ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp)
-       cd llama.cpp && mkdir build && cd build
-       cmake .. -DGGML_NATIVE=ON
-       cmake --build . --config Release -j4
+    2. Enable network connection editing the systemd () and adding:
+       ```
+       Environment="OLLAMA_HOST=0.0.0.0"
+       Environment="OLLAMA_MODELS=/media/pi/Nextcloud/ollama/models"
+       CPUQuota=300%
        ```
     3. **Run the Server:**
        ```bash
-       ./bin/llama-server -m Qwen_Qwen3.5-35B-A3B-Q3_K_M.gguf --host 0.0.0.0 --port 8080 --jinja --ctx-size 32768 --flash-attn on --reasoning-budget 0
+       sudo systemctl daemon-reload
+       sudo systemctl restart ollama
+       ollama pull qwen3.5:0.8b
+       ollama serve
        ```
 
 ---
@@ -33,7 +36,7 @@ This setup allows you to run a single Large Language Model (LLM) on a **Raspberr
     2. Search for **ProxyAI** and click **Install**.
     3. Go to `Settings` → `Tools` → `ProxyAI`.
     4. Select **OpenAI Compatible** (or Custom Provider).
-    5. Set **Endpoint** to: `http://<PI_IP_ADDRESS>:8080/v1`
+    5. Set **Endpoint** to: `http://<PI_IP_ADDRESS>:11434/v1`
     6. Set **API Key** to: `sk-dummy` (anything works).
 
 ---
@@ -49,8 +52,8 @@ This setup allows you to run a single Large Language Model (LLM) on a **Raspberr
        {
          "name": "Raspberry Pi LLM",
          "provider": "openai",
-         "model": "Qwen_Qwen3.5-35B-A3B-Q3_K_M.gguf",
-         "apiBase": "http://<PI_IP_ADDRESS>:8080/v1"
+         "model": "qwen3.5:0.8b",
+         "apiBase": "http://<PI_IP_ADDRESS>:11434/v1"
        }
        ```
 
@@ -66,7 +69,7 @@ This setup allows you to run a single Large Language Model (LLM) on a **Raspberr
        ```
     3. **Configure Environment:** Add these to your `.zshrc` or `.bashrc`:
        ```bash
-       export ANTHROPIC_BASE_URL="http://<PI_IP_ADDRESS>:8080"
+       export ANTHROPIC_BASE_URL="http://<PI_IP_ADDRESS>:11434"
        export ANTHROPIC_API_KEY="ollama"
        ```
     4. **Launch:** Run `claude` in any project folder.
@@ -78,8 +81,8 @@ This setup allows you to run a single Large Language Model (LLM) on a **Raspberr
 * **Link:** [openwebui.com](https://openwebui.com)
 * **Installation (via Docker):**
     ```bash
-    docker run -d -p 3000:8080 \
-      -e OPENAI_API_BASE_URL="http://host.docker.internal:8080/v1" \
+    docker run -d -p 3000:11434 \
+      -e OPENAI_API_BASE_URL="http://host.docker.internal:11434/v1" \
       -e OPENAI_API_KEY="sk-dummy" \
       --add-host=host.docker.internal:host-gateway \
       --name open-webui ghcr.io/open-webui/open-webui:main
@@ -93,13 +96,21 @@ This setup allows you to run a single Large Language Model (LLM) on a **Raspberr
 * **Link:** [github.com/sigoden/aichat](https://github.com/sigoden/aichat/releases)
 * **Installation:**
     1. Download from https://github.com/sigoden/aichat/releases
-    2. Extract to you PATH directory
-    3. Configure  `~/.config/aichat/config.yaml` file:
+    2. Extract and create a link
+       ```bash
+       sudo mkdir -p /opt/aichat
+       tar xzvf {file}
+       sudo mv aichat /opt/aichat/
+       sudo ln -s /opt/aichat/aichat /usr/bin/aichat
+       mkdir -p ~/.config/aichat/
+       ```
+    3. Extract to you PATH directory
+    4. Configure  `~/.config/aichat/config.yaml` file:
        ```
        clients:
          - type: openai
-           api_base: http://localhost:8080/v1
+           api_base: http://localhost:11434/v1
            api_key: sk-dummy
            models:
-             - name: Qwen_Qwen3.5-35B-A3B-Q3_K_M.gguf
+             - name: qwen3.5:0.8b
        ```
