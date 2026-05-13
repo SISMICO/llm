@@ -28,6 +28,21 @@ This setup allows you to run a single Large Language Model (LLM) on a **Raspberr
 
 ---
 
+## Extend Context Length
+
+Create file `Modelfile` like the example below:
+```
+FROM {model name}
+PARAMETER num_ctx 32768
+```
+
+After run the command to create the new model
+```
+ollama create -f Modelfile my-model-65k
+```
+
+---
+
 ## 💻 2. IntelliJ IDEA: ProxyAI
 **Description:** The premier JetBrains plugin for local LLMs. It features "Auto-Apply" for streaming code changes and deep project indexing.
 * **Link:** [ProxyAI on JetBrains Marketplace](https://plugins.jetbrains.com/plugin/21056-proxyai)

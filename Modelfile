@@ -1,0 +1,2 @@
+FROM {model name}
+PARAMETER num_ctx 32768
